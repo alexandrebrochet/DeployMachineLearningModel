@@ -3,3 +3,6 @@ uvicorn[standard]
 pytest
 pytest-cov
 httpx
+pandas
+joblib
+scikit-learn==1.9.0
