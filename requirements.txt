@@ -6,3 +6,6 @@ httpx
 pandas
 joblib
 scikit-learn==1.9.0
+sqlalchemy
+psycopg[binary]
+python-dotenv
