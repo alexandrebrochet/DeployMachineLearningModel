@@ -19,6 +19,13 @@ jobs:
     name: Tests Python
     runs-on: ubuntu-latest
 
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_NAME: building_energy_test
+      DB_USER: test_user
+      DB_PASSWORD: test_password_ci_only
+
     steps:
       - name: Recuperer le depot
         uses: actions/checkout@v4
