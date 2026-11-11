@@ -70,3 +70,35 @@ la gestion des erreurs et les opérations PostgreSQL.
 GitHub Actions exécute les tests unitaires et
 d'intégration avec une base PostgreSQL temporaire.
 Le seuil minimal de couverture est fixé à 85 %.
+
+
+## Diagramme de séquence — Prédiction énergétique
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant API as FastAPI
+    participant DB as PostgreSQL
+    participant ML as Service ML
+
+    Client->>API: POST /predict (JSON)
+    API->>API: Validation Pydantic
+    API->>DB: INSERT prediction_inputs
+    DB-->>API: ID de la prédiction
+    API->>ML: predict_energy(données)
+    ML-->>API: Consommation estimée
+    API->>DB: INSERT prediction_outputs
+    API->>DB: COMMIT
+    DB-->>API: Transaction validée
+    API-->>Client: HTTP 200 + résultat (kBtu)
+```
+
+### Gestion des erreurs
+
+- Données invalides : HTTP 422.
+- Erreur PostgreSQL : rollback et HTTP 503.
+- Erreur du modèle ML : rollback et HTTP 500.
+
+Les entrées et les résultats sont enregistrés
+dans une même transaction PostgreSQL.
