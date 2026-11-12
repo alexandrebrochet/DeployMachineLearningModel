@@ -80,3 +80,106 @@ jobs:
             coverage.xml
             pytest-results.xml
           if-no-files-found: warn
+
+  deploy:
+    name: Deploiement de validation
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: validation
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: validation_user
+          POSTGRES_PASSWORD: validation_password_ci_only
+          POSTGRES_DB: building_energy_validation
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U validation_user -d building_energy_validation"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_NAME: building_energy_validation
+      DB_USER: validation_user
+      DB_PASSWORD: validation_password_ci_only
+
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Configurer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Installer les dependances
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Initialiser PostgreSQL
+        run: |
+          python -c "from app.database.models import Base; from app.database.connection import engine; Base.metadata.create_all(bind=engine)"
+
+      - name: Verifier la base de validation
+        run: |
+          python -c "from sqlalchemy import text; from app.database.connection import engine; conn = engine.connect(); print('Base PostgreSQL :', conn.execute(text('SELECT current_database()')).scalar()); conn.close()"
+
+      - name: Demarrer FastAPI
+        run: |
+          python -m uvicorn app.main:app \
+            --host 127.0.0.1 \
+            --port 8000 \
+            > uvicorn.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Verifier le deploiement
+        run: |
+          python - <<'PY'
+          import time
+          import urllib.request
+
+          url = "http://127.0.0.1:8000/health"
+
+          for attempt in range(30):
+              try:
+                  with urllib.request.urlopen(url, timeout=3) as response:
+                      if response.status == 200:
+                          print("API FastAPI disponible : HTTP 200")
+                          break
+              except Exception:
+                  time.sleep(1)
+          else:
+              raise SystemExit(
+                  "Echec du deploiement : API indisponible"
+              )
+          PY
+
+      - name: Verifier la documentation Swagger
+        run: |
+          python - <<'PY'
+          import urllib.request
+
+          url = "http://127.0.0.1:8000/docs"
+
+          with urllib.request.urlopen(url, timeout=10) as response:
+              assert response.status == 200
+              print("Documentation Swagger disponible : HTTP 200")
+          PY
+
+      - name: Afficher les logs en cas d'erreur
+        if: failure()
+        run: |
+          if [ -f uvicorn.log ]; then
+            cat uvicorn.log
+          else
+            echo "Aucun journal Uvicorn disponible."
+          fi

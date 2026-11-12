@@ -32,3 +32,5 @@ data/
 
 #perso
 documents_perso/
+# Rapports de tests Pytest
+pytest-results.xml
