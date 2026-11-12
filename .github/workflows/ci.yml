@@ -60,7 +60,7 @@ jobs:
         run: |
           python -c "from app.database.models import Base; from app.database.connection import engine; Base.metadata.create_all(bind=engine)"
 
-            - name: Executer les tests Pytest
+      - name: Executer les tests Pytest
         run: |
           python -m pytest -v \
             --cov=app \
