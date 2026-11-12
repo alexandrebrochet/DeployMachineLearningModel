@@ -29,3 +29,6 @@ coverage.xml
 *.pkl
 *.joblib
 data/
+
+#perso
+documents_perso/
