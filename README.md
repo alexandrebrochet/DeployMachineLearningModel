@@ -208,3 +208,74 @@ Le déploiement sur un serveur distant n'est pas inclus dans l'environnement act
 ## 13. Documentation
 
 Voir `documents/architecture.md` pour les diagrammes UML de classes et de séquence.
+
+
+## Environnements et gestion des secrets
+
+### Environnement de développement
+
+L'application FastAPI est exécutée localement avec Python 3.13
+et PostgreSQL 18.
+
+Les paramètres de connexion sont définis dans un fichier `.env`
+local, non versionné dans Git.
+
+Le fichier `.env.example` fournit un modèle de configuration
+sans identifiants réels.
+
+Démarrage de l'API :
+
+```powershell
+python -m uvicorn app.main:app --reload
+```
+
+Documentation Swagger :
+
+http://127.0.0.1:8000/docs
+
+### Environnement de test
+
+Le pipeline GitHub Actions crée une base PostgreSQL temporaire
+nommée `building_energy_test`.
+
+Il automatise :
+- L'installation des dépendances Python.
+- L'initialisation des tables PostgreSQL.
+- L'exécution des tests Pytest.
+- La vérification d'une couverture minimale de 85 %.
+- La génération des rapports de tests et de couverture.
+
+Les rapports sont disponibles dans les artefacts GitHub Actions.
+
+### Environnement de validation
+
+Après la réussite des tests sur la branche `main`,
+GitHub Actions exécute le job `Deploiement de validation`.
+
+Ce job :
+- Initialise une base PostgreSQL temporaire indépendante.
+- Démarre automatiquement FastAPI.
+- Vérifie que `/health` répond avec HTTP 200.
+- Vérifie que `/docs` répond avec HTTP 200.
+
+Le déploiement est temporaire et limité au runner GitHub Actions.
+Il ne constitue pas un hébergement permanent de l'application.
+
+### Gestion des secrets
+
+Le fichier `.env` est exclu du dépôt par `.gitignore`.
+
+Les identifiants PostgreSQL utilisés dans GitHub Actions
+concernent uniquement des bases temporaires créées pour
+les tests et la validation.
+
+Aucun identifiant de la base locale ou de production
+n'est nécessaire au pipeline.
+
+Pour un éventuel déploiement sur un serveur distant,
+les identifiants devront être stockés dans GitHub Secrets
+et transmis au workflow par les variables d'environnement.
+
+### Version du projet
+
+La version stable du projet est identifiée par le tag Git `v1.0.0`.
